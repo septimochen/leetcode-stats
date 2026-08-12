@@ -6,14 +6,22 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "leetcode-stats",
 	"main": "src/index.ts",
-	"compatibility_date": "2026-08-12",
+	"compatibility_date": "2026-08-11",
 	"observability": {
 		"enabled": true
 	},
 	"upload_source_maps": true,
 	"compatibility_flags": [
 		"nodejs_compat"
-	]
+	],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "leetcode-stats",
+			"database_id": "44e80158-0a41-4cc9-aa2a-c5559d2483a3",
+			"remote": true
+		}
+	],
 	/**
 	 * Smart Placement
 	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
@@ -31,7 +39,21 @@
 	 * Note: Use secrets to store sensitive data.
 	 * https://developers.cloudflare.com/workers/configuration/secrets/
 	 */
-	// "vars": {  "MY_VARIABLE": "production_value" }
+	"vars": {
+		"LEETCODE_USERNAME": "septimochen"
+	},
+	"triggers": {
+		"crons": [
+			"10 16 * * *"
+		]
+	},
+	"workflows": [
+		{
+			"name": "leetcode-stats-workflow",
+			"binding": "LEETCODE_STATS_WORKFLOW",
+			"class_name": "LeetCodeStatsWorkflow"
+		}
+	]
 	/**
 	 * Static Assets
 	 * https://developers.cloudflare.com/workers/static-assets/binding/
