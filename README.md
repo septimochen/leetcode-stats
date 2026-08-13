@@ -1,6 +1,6 @@
 # leetcode-stats
 
-The Worker exposes a small dashboard at `/dashboard`. It loads `/api/stats`
+The Worker exposes a small React + Tailwind dashboard at `/dashboard`. It loads `/api/stats`
 in the browser and visualizes:
 
 - daily global ranking history, where lower is better;
@@ -9,5 +9,5 @@ in the browser and visualizes:
 - contest rating and contest global ranking when available; and
 - the full snapshot history.
 
-Run the Worker locally with `npx wrangler dev --local`, then open
+Build the frontend with `npm run build`. Run the Worker locally with `npm run dev`, then open
 `http://localhost:8787/dashboard`.

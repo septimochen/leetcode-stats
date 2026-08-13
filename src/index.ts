@@ -6,7 +6,6 @@ import {
 
 import { fetchLeetCodeStats } from "./leetcode";
 import { getAllStats, getLatestStats, saveStats } from "./db";
-import { dashboardHtml } from "./dashboard";
 
 interface WorkflowParams {
 	username: string;
@@ -117,12 +116,7 @@ export default {
 		}
 
 		if (url.pathname === "/dashboard") {
-			return new Response(dashboardHtml, {
-				headers: {
-					"content-type": "text/html; charset=UTF-8",
-					"cache-control": "no-cache",
-				},
-			});
+			return env.ASSETS.fetch(new Request(new URL("/index.html", request.url)));
 		}
 
 		if (url.pathname === "/api/stats") {
