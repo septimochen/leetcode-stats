@@ -3,17 +3,25 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "deploy": "wrangler deploy",
-    "dev": "wrangler dev",
-    "start": "wrangler dev",
+    "build": "vite build",
+    "deploy": "npm run build && wrangler deploy",
+    "dev": "npm run build && wrangler dev --local",
+    "start": "npm run dev",
     "test": "vitest",
     "cf-typegen": "wrangler types"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.12.4",
+    "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.2.0",
+    "@vitejs/plugin-react": "^5.1.1",
+    "tailwindcss": "^4.3.3",
     "typescript": "^5.5.2",
     "vitest": "~3.2.0",
     "wrangler": "^4.121.0"
+  },
+  "dependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   }
 }
