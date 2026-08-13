@@ -117,6 +117,11 @@ This keeps the application compatible with the Workers Free plan.
 
 ```text
 leetcode-stats/
+├── frontend/
+│   ├── App.tsx
+│   ├── main.tsx
+│   ├── index.css
+│   └── index.html
 ├── src/
 │   ├── index.ts
 │   ├── leetcode.ts
@@ -126,6 +131,7 @@ leetcode-stats/
 │   └── 0001_initial.sql
 │
 ├── wrangler.jsonc
+├── vite.config.ts
 ├── package.json
 ├── tsconfig.json
 ├── worker-configuration.d.ts
@@ -172,7 +178,16 @@ The expected `wrangler.jsonc` structure is:
       "binding": "LEETCODE_STATS_WORKFLOW",
       "class_name": "LeetCodeStatsWorkflow"
     }
-  ]
+  ],
+
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/api/*",
+      "/dashboard"
+    ]
+  }
 }
 ```
 
@@ -589,21 +604,28 @@ This gives the Workflow durable execution and retry behavior.
 
 # Local Development
 
-This is important.
+The dashboard is a React + Tailwind frontend built with Vite. The build output
+is written to `dist/` and served by the Cloudflare Assets binding.
 
-Use:
-
-```bash
-npx wrangler dev --local
-```
-
-Do NOT assume:
+Install dependencies and build the frontend with:
 
 ```bash
-npx wrangler dev
+npm install
+npm run build
 ```
 
-is equivalent when debugging this project.
+For local development, use:
+
+```bash
+npm run dev
+```
+
+This runs `npm run build && wrangler dev --local`.
+
+Open the dashboard at `http://localhost:8787/dashboard`.
+
+Do not use `npx wrangler dev` without `--local` when testing this project,
+because local mode keeps development D1 data separate from production D1.
 
 During development, local mode should use the local D1 database:
 
@@ -706,22 +728,31 @@ code that expects the schema.
 
 # Deployment
 
-Typical production deployment:
+Authenticate with Cloudflare if needed:
+
+```bash
+npx wrangler login
+```
+
+Apply the production migration, then build and deploy the Worker and frontend:
 
 ```bash
 npx wrangler d1 migrations apply leetcode-stats --remote
+npm run deploy
 ```
 
-then:
-
-```bash
-npx wrangler deploy
-```
+`npm run deploy` runs `npm run build && wrangler deploy`.
 
 After deployment:
 
 ```bash
 curl https://leetcode-stats.<subdomain>.workers.dev/api/stats
+```
+
+The dashboard is available at:
+
+```text
+https://leetcode-stats.<subdomain>.workers.dev/dashboard
 ```
 
 ---
@@ -745,6 +776,7 @@ The generated `Env` interface should contain bindings such as:
 ```ts
 interface Env {
   DB: D1Database;
+  ASSETS: Fetcher;
 
   LEETCODE_USERNAME: string;
 
@@ -1237,7 +1269,13 @@ npx wrangler types
 ## Local development
 
 ```bash
-npx wrangler dev --local
+npm run dev
+```
+
+## Build frontend
+
+```bash
+npm run build
 ```
 
 ## Local D1 query
@@ -1269,7 +1307,7 @@ npx wrangler d1 migrations apply leetcode-stats --remote
 ## Deploy
 
 ```bash
-npx wrangler deploy
+npm run deploy
 ```
 
 ## List Workflows
