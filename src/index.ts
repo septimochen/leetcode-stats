@@ -6,6 +6,7 @@ import {
 
 import { fetchLeetCodeStats } from "./leetcode";
 import { getAllStats, getLatestStats, saveStats } from "./db";
+import { dashboardHtml } from "./dashboard";
 
 interface WorkflowParams {
 	username: string;
@@ -112,6 +113,15 @@ export default {
 			return Response.json({
 				name: "leetcode-stats",
 				status: "ok",
+			});
+		}
+
+		if (url.pathname === "/dashboard") {
+			return new Response(dashboardHtml, {
+				headers: {
+					"content-type": "text/html; charset=UTF-8",
+					"cache-control": "no-cache",
+				},
 			});
 		}
 
