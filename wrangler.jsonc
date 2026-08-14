@@ -44,7 +44,7 @@
 	},
 	"triggers": {
 		"crons": [
-			"00 14 * * *"
+			"00 12 * * *"
 		]
 	},
 	"workflows": [
@@ -57,7 +57,10 @@
 	"assets": {
 		"directory": "./dist",
 		"binding": "ASSETS",
-		"run_worker_first": ["/api/*", "/dashboard"]
+		"run_worker_first": [
+			"/api/*",
+			"/dashboard"
+		]
 	}
 	/**
 	 * Static Assets
