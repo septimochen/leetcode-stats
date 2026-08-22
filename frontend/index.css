@@ -1,5 +1,16 @@
 @import 'tailwindcss';
 
+@theme {
+	--color-bg: #080d15;
+	--color-panel: #101925;
+	--color-line: #243244;
+	--color-muted: #8fa1b5;
+	--color-lime: #c7f36b;
+	--color-cyan: #63d6df;
+	--color-orange: #ffb86b;
+	--color-red: #ff7d8a;
+}
+
 :root {
 	color-scheme: dark;
 	--color-bg: #080d15;
