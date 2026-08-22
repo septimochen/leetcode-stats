@@ -57,6 +57,17 @@ function RankingChart({ points }: { points: Snapshot[] }) {
   const line = points.map((point, index) => `${index ? "L" : "M"}${x(index)} ${y(point.ranking)}`).join(" ");
   const area = `${line} L ${x(points.length - 1)} ${height - padding.bottom} L ${x(0)} ${height - padding.bottom} Z`;
   const ticks = Array.from({ length: Math.floor((high - low) / step) + 1 }, (_, index) => high - index * step);
+  const xAxisLabelCount = Math.min(points.length, 7);
+  const dateValues = points.map((point) => Date.parse(`${point.date}T00:00:00Z`));
+  const firstDate = dateValues[0];
+  const lastDate = dateValues[dateValues.length - 1];
+  const xAxisLabelIndices = new Set(Array.from({ length: xAxisLabelCount }, (_, labelIndex) => {
+    if (xAxisLabelCount === 1) return 0;
+    const targetDate = firstDate + (lastDate - firstDate) * labelIndex / (xAxisLabelCount - 1);
+    return dateValues.reduce((closestIndex, dateValue, index) =>
+      Math.abs(dateValue - targetDate) < Math.abs(dateValues[closestIndex] - targetDate) ? index : closestIndex,
+    0);
+  }));
 
   return (
     <div className="relative">
@@ -70,8 +81,7 @@ function RankingChart({ points }: { points: Snapshot[] }) {
         {ticks.map((tick) => (
           <g key={tick}>
             <line className="stroke-line" x1={padding.left} x2={width - padding.right} y1={y(tick)} y2={y(tick)} />
-            <rect x={padding.left - 62} y={y(tick) - 10} width="52" height="18" rx="4" fill="#080d15" fillOpacity=".92" />
-            <text className="fill-white text-[11px] font-semibold" x={padding.left - 10} y={y(tick) + 4} textAnchor="end">{formatThousands(tick)}</text>
+            <text className="fill-muted text-[11px]" x={padding.left - 10} y={y(tick) + 4} textAnchor="end">{formatThousands(tick)}</text>
           </g>
         ))}
         <path d={area} fill="url(#rank-fill)" />
@@ -87,10 +97,9 @@ function RankingChart({ points }: { points: Snapshot[] }) {
             <circle cx={x(index)} cy={y(point.ranking)} r={points.length > 30 ? 2.5 : 4} fill="#080d15" className="stroke-lime" strokeWidth="2" pointerEvents="none" />
           </g>
         ))}
-        {points.map((point, index) => index === 0 || index === points.length - 1 || (points.length > 5 && index === Math.floor(points.length / 2)) ? (
+        {points.map((point, index) => xAxisLabelIndices.has(index) ? (
           <g key={`label-${point.date}`}>
-            <rect x={x(index) - 25} y={height - 27} width="50" height="18" rx="4" fill="#080d15" fillOpacity=".92" />
-            <text className="fill-white text-[11px] font-semibold" x={x(index)} y={height - 12} textAnchor="middle">{point.date.slice(5)}</text>
+            <text className="fill-muted text-[11px]" x={x(index)} y={height - 12} textAnchor="middle">{point.date.slice(5)}</text>
           </g>
         ) : null)}
       </svg>
