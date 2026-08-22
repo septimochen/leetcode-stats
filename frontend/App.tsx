@@ -15,6 +15,15 @@ type Snapshot = {
 const numberFormat = new Intl.NumberFormat();
 const formatNumber = (value: number | null | undefined) =>
   value == null ? "—" : numberFormat.format(value);
+const formatThousands = (value: number) => `${numberFormat.format(Math.round(value / 1000))}K`;
+
+function niceTickStep(range: number, tickCount: number) {
+  const roughStep = range / Math.max(tickCount - 1, 1);
+  const magnitude = 10 ** Math.floor(Math.log10(roughStep));
+  const normalized = roughStep / magnitude;
+  const niceNormalized = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
+  return niceNormalized * magnitude;
+}
 
 function Metric({ label, value, note, tone = "" }: { label: string; value: string; note: string; tone?: string }) {
   return (
@@ -38,15 +47,16 @@ function RankingChart({ points }: { points: Snapshot[] }) {
   const ranks = points.map((point) => point.ranking);
   const min = Math.min(...ranks);
   const max = Math.max(...ranks);
-  const spread = Math.max(max - min, 1000);
-  const low = Math.max(0, min - spread * 0.15);
-  const high = max + spread * 0.15;
+  const tickCount = 5;
+  const step = niceTickStep(Math.max(max - min, 1000), tickCount);
+  const low = Math.max(0, Math.floor(min / step) * step);
+  const high = Math.max(low + step, Math.ceil(max / step) * step);
   const x = (index: number) => padding.left + (points.length === 1 ? innerWidth / 2 : index * innerWidth / (points.length - 1));
   // SVG y grows downward, so this intentionally puts smaller ranks at the top.
   const y = (rank: number) => padding.top + (rank - low) * innerHeight / (high - low);
   const line = points.map((point, index) => `${index ? "L" : "M"}${x(index)} ${y(point.ranking)}`).join(" ");
   const area = `${line} L ${x(points.length - 1)} ${height - padding.bottom} L ${x(0)} ${height - padding.bottom} Z`;
-  const ticks = [0, 0.5, 1].map((step) => high - (high - low) * step);
+  const ticks = Array.from({ length: Math.floor((high - low) / step) + 1 }, (_, index) => high - index * step);
 
   return (
     <div className="relative">
@@ -60,7 +70,8 @@ function RankingChart({ points }: { points: Snapshot[] }) {
         {ticks.map((tick) => (
           <g key={tick}>
             <line className="stroke-line" x1={padding.left} x2={width - padding.right} y1={y(tick)} y2={y(tick)} />
-            <text className="fill-muted text-[11px]" x={padding.left - 10} y={y(tick) + 4} textAnchor="end">{formatNumber(Math.round(tick))}</text>
+            <rect x={padding.left - 62} y={y(tick) - 10} width="52" height="18" rx="4" fill="#080d15" fillOpacity=".92" />
+            <text className="fill-white text-[11px] font-semibold" x={padding.left - 10} y={y(tick) + 4} textAnchor="end">{formatThousands(tick)}</text>
           </g>
         ))}
         <path d={area} fill="url(#rank-fill)" />
@@ -77,7 +88,10 @@ function RankingChart({ points }: { points: Snapshot[] }) {
           </g>
         ))}
         {points.map((point, index) => index === 0 || index === points.length - 1 || (points.length > 5 && index === Math.floor(points.length / 2)) ? (
-          <text key={`label-${point.date}`} className="fill-muted text-[11px]" x={x(index)} y={height - 12} textAnchor="middle">{point.date.slice(5)}</text>
+          <g key={`label-${point.date}`}>
+            <rect x={x(index) - 25} y={height - 27} width="50" height="18" rx="4" fill="#080d15" fillOpacity=".92" />
+            <text className="fill-white text-[11px] font-semibold" x={x(index)} y={height - 12} textAnchor="middle">{point.date.slice(5)}</text>
+          </g>
         ) : null)}
       </svg>
       {hovered != null && (
