@@ -162,9 +162,7 @@ The expected `wrangler.jsonc` structure is:
     }
   ],
 
-  "vars": {
-    "LEETCODE_USERNAME": "septimochen"
-  },
+  "vars": {},
 
   "triggers": {
     "crons": [
@@ -193,6 +191,19 @@ The expected `wrangler.jsonc` structure is:
 
 The actual D1 `database_id` should be kept in the project configuration as
 required by Wrangler.
+
+Set the username as a Cloudflare Worker secret before deployment:
+
+```bash
+npx wrangler secret put LEETCODE_USERNAME
+```
+
+For local development, provide the same secret in `.dev.vars` (which must not
+be committed):
+
+```text
+LEETCODE_USERNAME=septimochen
+```
 
 ---
 
@@ -319,7 +330,8 @@ The `fetch()` handler provides the HTTP API.
 
 The `scheduled()` handler is invoked by Cloudflare Cron Triggers.
 
-The scheduled handler should create a Workflow:
+The scheduled handler should create a Workflow. `LEETCODE_USERNAME` is a
+Cloudflare secret, accessed through the same `env.LEETCODE_USERNAME` binding:
 
 ```ts
 async scheduled(

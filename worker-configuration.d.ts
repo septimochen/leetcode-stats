@@ -4,7 +4,7 @@
 interface __BaseEnv_Env {
 	DB: D1Database;
 	ASSETS: Fetcher;
-	LEETCODE_USERNAME: "septimochen";
+	LEETCODE_USERNAME: string;
 	LEETCODE_STATS_WORKFLOW: Workflow<Parameters<import("./src/index").LeetCodeStatsWorkflow['run']>[0]['payload']>;
 }
 declare namespace Cloudflare {
