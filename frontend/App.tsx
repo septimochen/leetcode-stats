@@ -8,6 +8,10 @@ type Snapshot = {
   easy_solved: number;
   medium_solved: number;
   hard_solved: number;
+  total_problems?: number | null;
+  easy_problems?: number | null;
+  medium_problems?: number | null;
+  hard_problems?: number | null;
   contest_rating: number | null;
   contest_global_ranking: number | null;
 };
@@ -115,9 +119,54 @@ function RankingChart({ points }: { points: Snapshot[] }) {
 }
 
 function Breakdown({ latest }: { latest: Snapshot }) {
-  const total = latest.total_solved || 1;
   const values = [["Easy", latest.easy_solved, "bg-lime"], ["Medium", latest.medium_solved, "bg-orange"], ["Hard", latest.hard_solved, "bg-red"]] as const;
-  return <div className="grid gap-5">{values.map(([label, count, color]) => <div key={label}><div className="mb-2 flex justify-between text-sm"><b>{label}</b><span className="text-muted">{formatNumber(count)} · {Math.round(count / total * 100)}%</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-700"><i className={`block h-full rounded-full ${color}`} style={{ width: `${count / total * 100}%` }} /></div></div>)}</div>;
+  const total = values.reduce((sum, [, count]) => sum + count, 0);
+  const shares = values.map(([, count]) => total ? count / total * 100 : 0);
+  const percentages = shares.map(Math.floor);
+  // Allocate rounding leftovers so the displayed percentages also total 100%.
+  const remainderOrder = shares.map((share, index) => ({ index, remainder: share - percentages[index] }))
+    .sort((a, b) => b.remainder - a.remainder);
+  const leftover = total ? 100 - percentages.reduce((sum, percentage) => sum + percentage, 0) : 0;
+  for (let index = 0; index < leftover; index++) percentages[remainderOrder[index].index]++;
+
+  return <div>
+    <div className="flex h-4 overflow-hidden rounded-full bg-slate-700" role="img" aria-label={total ? values.map(([label], index) => `${label}: ${percentages[index]}%`).join(", ") : "No solved problems yet"}>
+      {values.map(([label, count, color], index) => <div key={label} className={`h-full ${color}`} style={{ width: `${shares[index]}%` }} title={`${label}: ${formatNumber(count)} (${percentages[index]}%)`} />)}
+    </div>
+    <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
+      {values.map(([label, count, color], index) => <div key={label}>
+        <div className="flex items-center gap-2"><span className={`h-2 w-2 shrink-0 rounded-full ${color}`} /><b>{label}</b></div>
+        <div className="mt-1 font-semibold">{percentages[index]}%</div>
+        <div className="text-xs text-muted">{formatNumber(count)} solved</div>
+      </div>)}
+    </div>
+    {!total && <p className="mt-3 text-xs text-muted">No solved problems yet.</p>}
+  </div>;
+}
+
+function Completion({ latest }: { latest: Snapshot }) {
+  const rows = [
+    ["Total", latest.total_solved, latest.total_problems, "bg-cyan"],
+    ["Easy", latest.easy_solved, latest.easy_problems, "bg-lime"],
+    ["Medium", latest.medium_solved, latest.medium_problems, "bg-orange"],
+    ["Hard", latest.hard_solved, latest.hard_problems, "bg-red"],
+  ] as const;
+  return <div className="mt-6 border-t border-line pt-5">
+    <h3 className="mb-1 text-sm font-semibold">Completion progress</h3>
+    <p className="mb-4 text-xs text-muted">Solved / available problems at snapshot time</p>
+    <div className="grid gap-4">{rows.map(([label, solved, total, color]) => {
+      const percentage = total != null && total > 0 ? Math.min(100, solved / total * 100) : null;
+      return <div key={label}>
+        <div className="mb-2 flex items-center justify-between gap-2 text-xs">
+          <b>{label}</b><span className="text-muted">{formatNumber(solved)} / {formatNumber(total)} <strong className="ml-1 text-white">{percentage == null ? "—" : `${percentage.toFixed(1)}%`}</strong></span>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-slate-700" role={percentage == null ? undefined : "progressbar"} aria-label={`${label} completion`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percentage ?? undefined} aria-valuetext={percentage == null ? undefined : `${solved} of ${total} problems solved`}>
+          <div className={`h-full rounded-full ${color}`} style={{ width: `${percentage ?? 0}%` }} />
+        </div>
+      </div>;
+    })}</div>
+    {rows.some(([, , total]) => total == null || total <= 0) && <p className="mt-3 text-xs text-muted">Problem totals will appear after the next daily collection.</p>}
+  </div>;
 }
 
 export default function App() {
@@ -139,7 +188,7 @@ export default function App() {
 
   return <main className="mx-auto max-w-6xl px-6 py-11"><header className="mb-8 flex items-end justify-between gap-6 max-md:flex-col max-md:items-start"><div><p className="font-bold uppercase tracking-widest text-lime">Daily progress log</p><h1 className="mt-2 text-6xl font-bold leading-none tracking-tighter max-md:text-5xl">LeetCode pulse</h1><p className="mt-4 text-muted">A quiet look at the work behind the numbers.</p></div><div className="text-right text-xs text-muted max-md:text-left"><strong className="block text-sm text-white">{latest.username}</strong>Updated {latest.date}</div></header>
     <section className="mb-3 grid grid-cols-4 gap-3 max-md:grid-cols-2"><Metric label="Global ranking" value={formatNumber(latest.ranking)} note={latest.date} /><Metric label="Problems solved" value={formatNumber(latest.total_solved)} note={`${latest.easy_solved} easy · ${latest.medium_solved} medium · ${latest.hard_solved} hard`} /><Metric label="Ranking change" value={rankingChange == null ? "—" : `${rankingChange > 0 ? "+" : ""}${formatNumber(rankingChange)} places`} note="Since previous snapshot" tone={rankingChange == null ? "text-cyan" : rankingChange < 0 ? "text-lime" : rankingChange > 0 ? "text-red" : "text-cyan"} /><Metric label="Contest rating" value={formatNumber(latest.contest_rating)} note={latest.contest_global_ranking ? `Global rank ${formatNumber(latest.contest_global_ranking)}` : "No contest rank recorded"} /></section>
-    <section className="grid grid-cols-[minmax(0,1.6fr)_minmax(290px,.8fr)] gap-3 max-md:grid-cols-1"><article className="rounded-2xl border border-line bg-panel p-6"><div className="mb-5 flex justify-between"><h2 className="font-semibold">Global ranking</h2></div><RankingChart points={stats} /></article><article className="rounded-2xl border border-line bg-panel p-6"><div className="mb-5 flex justify-between"><h2 className="font-semibold">Problems solved</h2><span className="text-xs text-muted">{formatNumber(latest.total_solved)} total</span></div><Breakdown latest={latest} /></article></section>
+    <section className="grid grid-cols-[minmax(0,1.6fr)_minmax(290px,.8fr)] gap-3 max-md:grid-cols-1"><article className="rounded-2xl border border-line bg-panel p-6"><div className="mb-5 flex justify-between"><h2 className="font-semibold">Global ranking</h2></div><RankingChart points={stats} /></article><article className="rounded-2xl border border-line bg-panel p-6"><div className="mb-5 flex justify-between"><h2 className="font-semibold">Problems solved</h2><span className="text-xs text-muted">{formatNumber(latest.total_solved)} total</span></div><Breakdown latest={latest} /><Completion latest={latest} /></article></section>
     <section className="mt-3 overflow-hidden rounded-2xl border border-line bg-panel p-6"><div className="mb-5 flex items-center justify-between gap-4"><div><h2 className="font-semibold">Snapshot history</h2><span className="text-xs text-muted">{stats.length} {stats.length === 1 ? "snapshot" : "snapshots"}</span></div>{snapshotPageCount > 1 && <div className="flex items-center gap-2">{snapshotPage > 1 && <button type="button" className="rounded-lg border border-line px-3 py-1.5 text-xs text-muted transition hover:border-lime hover:text-white" onClick={() => setSnapshotPage((page) => Math.max(1, page - 1))} aria-label="Show previous page">Previous</button>}<span className="min-w-18 text-center text-xs text-muted">Page {snapshotPage} of {snapshotPageCount}</span><button type="button" className="rounded-lg border border-line px-3 py-1.5 text-xs text-muted transition hover:border-lime hover:text-white disabled:cursor-not-allowed disabled:opacity-40" onClick={() => setSnapshotPage((page) => Math.min(snapshotPageCount, page + 1))} disabled={snapshotPage === snapshotPageCount} aria-label="Show next page">Next</button></div>}</div><div className="overflow-x-auto"><table className="w-full min-w-150 border-collapse text-right text-sm"><thead className="text-xs uppercase tracking-wider text-muted"><tr><th className="p-2 text-left">Date</th><th className="p-2">Ranking</th><th className="p-2">Total solved</th><th className="p-2">Easy</th><th className="p-2">Medium</th><th className="p-2">Hard</th></tr></thead><tbody>{visibleSnapshots.map((point) => <tr key={point.date} className="border-t border-line"><td className="p-3 text-left">{point.date}</td><td className="p-3">{formatNumber(point.ranking)}</td><td className="p-3">{formatNumber(point.total_solved)}</td><td className="p-3">{formatNumber(point.easy_solved)}</td><td className="p-3">{formatNumber(point.medium_solved)}</td><td className="p-3">{formatNumber(point.hard_solved)}</td></tr>)}</tbody></table></div></section>
   </main>;
 }
