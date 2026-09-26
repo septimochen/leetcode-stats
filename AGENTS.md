@@ -1,5 +1,12 @@
 # AGENTS.md
 
+## Repository Working Rules
+
+1. For Python projects, use `uv` and add `ruff`, `ty`, and `pytest` as development dependencies. This project uses TypeScript; do not introduce Python tooling solely for this rule.
+2. When completing a task, commit the changes with a descriptive message and push if a Git remote exists. Report any blocker rather than claiming an unsuccessful push succeeded.
+3. Maintain the root `Makefile` for common build, check, test, format, development, migration, and deployment commands.
+4. Use a whitelist-style `.gitignore`: ignore everything by default and explicitly allow project files and folders. Keep secrets, local database state, dependencies, and generated build output ignored.
+
 ## Project Overview
 
 `leetcode-stats` is a Cloudflare Workers application that collects a user's
@@ -746,14 +753,23 @@ Authenticate with Cloudflare if needed:
 npx wrangler login
 ```
 
-Apply the production migration, then build and deploy the Worker and frontend:
+Use the migration-aware deployment command:
 
 ```bash
-npx wrangler d1 migrations apply leetcode-stats --remote
-npm run deploy
+make deploy
+# Equivalent: npm run deploy
 ```
 
-`npm run deploy` runs `npm run build && wrangler deploy`.
+`npm run deploy` runs:
+
+```bash
+npm run build && wrangler d1 migrations apply leetcode-stats --remote && wrangler deploy
+```
+
+The order is intentional: build, apply pending production migrations, then publish.
+Keep the `&&` failure gates: if either build or migration fails, publishing must stop.
+Do not bypass this command with a direct `wrangler deploy`, including in CI.
+See Debugging Lesson 6 for schema-change verification and recovery.
 
 After deployment:
 
@@ -1138,6 +1154,77 @@ D1
 ```
 
 Use both when debugging.
+
+---
+
+## 6. Deploying code does not migrate D1
+
+The 2026-09-26 scheduled collection failed after completion percentages were added.
+The new `saveStats()` SQL referenced `total_problems`, `easy_problems`,
+`medium_problems`, and `hard_problems`, but production D1 had not received
+`0002_problem_totals.sql`. The previous deployment command built and published
+code without applying migrations. Committing a migration file or applying it
+locally does not update production D1.
+
+The production Workflow log confirmed:
+
+```text
+fetch LeetCode statistics: succeeded
+determine collection date: succeeded
+save statistics to D1: failed
+D1_ERROR: table stats has no column named total_problems: SQLITE_ERROR
+```
+
+Build, TypeScript checks, and an isolated SQLite test had passed, but none proved
+that the production schema matched the new SQL. Workflow retries could not fix
+missing columns. Applying the existing production migration and restarting the
+failed write step recovered the collection successfully.
+
+### Required workflow for schema changes
+
+1. Add a new numbered migration whenever SQL starts using new columns or tables.
+   Do not rewrite previously applied migrations.
+2. Prefer additive migrations that work with the currently deployed code. Keep
+   new fields nullable when historical rows have no values; do not fabricate
+   historical problem totals. Plan destructive schema changes separately so
+   migration-first deployment does not break the old Worker.
+3. Apply migrations with explicit `--local` in local development. Verify both a
+   fresh database and an upgrade containing existing snapshots, including daily
+   upsert behavior and preservation of historical rows.
+4. Run `make check` and relevant regression tests. These validate code and local
+   behavior; they do not establish that a production migration has been applied.
+5. Deploy through `make deploy` or `npm run deploy` so production migrations run
+   before publishing. Every CI deployment must follow the same order and stop
+   on migration errors. Never work around a migration failure by publishing anyway.
+6. After a schema-changing deployment, inspect production migration status and
+   verify one Workflow completes its D1 write. Confirm the expected snapshot is
+   available through the API. A healthy `/` response or readable historical data
+   does not prove that new writes work.
+7. If production access or live verification is unavailable, state exactly what
+   remains unverified. Do not describe a local-only check as production success.
+
+### Diagnosing and recovering a failed collection
+
+Inspect the affected instance before making speculative code changes:
+
+```bash
+npx wrangler workflows instances describe leetcode-stats-workflow <instance-id> --no-step-output
+npx wrangler d1 migrations list leetcode-stats --remote
+```
+
+For a confirmed missing-schema error, apply the pending migration, then restart
+that specific instance from its failed write step:
+
+```bash
+npx wrangler d1 migrations apply leetcode-stats --remote
+npx wrangler workflows instances restart leetcode-stats-workflow <instance-id> --from-step-name "save statistics to D1"
+npx wrangler workflows instances describe leetcode-stats-workflow <instance-id> --no-step-output
+```
+
+Restarting from the write step preserves the already collected statistics and
+collection date. Verify completion and the stored snapshot. The unique
+`(username, date)` key and upsert prevent duplicate daily records during recovery.
+Never swallow the write error or return success while dropping the snapshot.
 
 ---
 
