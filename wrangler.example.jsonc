@@ -18,8 +18,7 @@
 		{
 			"binding": "DB",
 			"database_name": "leetcode-stats",
-			"database_id": "44e80158-0a41-4cc9-aa2a-c5559d2483a3",
-			"remote": true
+			"database_id": "YOUR_DATABASE_ID"
 		}
 	],
 	/**

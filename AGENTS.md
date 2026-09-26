@@ -137,7 +137,8 @@ leetcode-stats/
 ├── migrations/
 │   └── 0001_initial.sql
 │
-├── wrangler.jsonc
+├── wrangler.example.jsonc  # tracked template
+├── wrangler.jsonc          # ignored account-specific config
 ├── vite.config.ts
 ├── package.json
 ├── tsconfig.json
@@ -148,6 +149,10 @@ leetcode-stats/
 ---
 
 # Cloudflare Configuration
+
+The tracked `wrangler.example.jsonc` template defines the shared configuration.
+Run `make setup` after cloning to create the ignored `wrangler.jsonc` and
+`.dev.vars` without overwriting existing files. Wrangler uses `wrangler.jsonc`.
 
 The expected `wrangler.jsonc` structure is:
 
@@ -196,8 +201,14 @@ The expected `wrangler.jsonc` structure is:
 }
 ```
 
-The actual D1 `database_id` should be kept in the project configuration as
-required by Wrangler.
+Keep the actual D1 `database_id` only in the ignored `wrangler.jsonc` used by
+Wrangler. The tracked `wrangler.example.jsonc` must use `YOUR_DATABASE_ID`.
+Never re-add `wrangler.jsonc` to Git or copy account-specific IDs into the template.
+New forks must create their own database and fill in its ID before deployment.
+CI must supply its own complete config before applying migrations and publishing.
+Keep shared config changes in the template and synchronize the ignored local
+config when needed. Do not enable `remote: true` in the shared template; local
+development must use local D1. See README.md for the first-time setup commands.
 
 Set the username as a Cloudflare Worker secret before deployment:
 

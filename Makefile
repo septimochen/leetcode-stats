@@ -1,4 +1,8 @@
-.PHONY: install build check test format dev migrate-local deploy typegen
+.PHONY: setup install build check test format dev migrate-local deploy typegen
+
+setup:
+	@test -f wrangler.jsonc || cp wrangler.example.jsonc wrangler.jsonc
+	@test -f .dev.vars || cp .dev.vars.example .dev.vars
 
 install:
 	npm ci
@@ -14,7 +18,7 @@ test:
 	npm test -- --run
 
 format:
-	npx --yes prettier@3.6.2 --write frontend src test package.json tsconfig.json vite.config.ts vitest.config.mts wrangler.jsonc README.md
+	npx --yes prettier@3.6.2 --write frontend src test package.json tsconfig.json vite.config.ts vitest.config.mts wrangler.example.jsonc README.md
 
 dev:
 	npm run dev
