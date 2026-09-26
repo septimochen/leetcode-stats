@@ -16,10 +16,14 @@ export async function saveStats(
 				easy_solved,
 				medium_solved,
 				hard_solved,
+				total_problems,
+				easy_problems,
+				medium_problems,
+				hard_problems,
 				contest_rating,
 				contest_global_ranking
 			)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			ON CONFLICT(username, date)
 			DO UPDATE SET
 				ranking = excluded.ranking,
@@ -28,6 +32,10 @@ export async function saveStats(
 				easy_solved = excluded.easy_solved,
 				medium_solved = excluded.medium_solved,
 				hard_solved = excluded.hard_solved,
+				total_problems = excluded.total_problems,
+				easy_problems = excluded.easy_problems,
+				medium_problems = excluded.medium_problems,
+				hard_problems = excluded.hard_problems,
 				contest_rating = excluded.contest_rating,
 				contest_global_ranking =
 					excluded.contest_global_ranking
@@ -41,6 +49,10 @@ export async function saveStats(
             stats.easySolved,
             stats.mediumSolved,
             stats.hardSolved,
+            stats.totalProblems ?? null,
+            stats.easyProblems ?? null,
+            stats.mediumProblems ?? null,
+            stats.hardProblems ?? null,
             stats.contestRating,
             stats.contestGlobalRanking,
         )

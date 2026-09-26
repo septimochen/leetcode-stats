@@ -9,12 +9,18 @@ export interface LeetCodeStats {
     mediumSolved: number;
     hardSolved: number;
 
+    totalProblems: number;
+    easyProblems: number;
+    mediumProblems: number;
+    hardProblems: number;
+
     contestRating: number | null;
     contestGlobalRanking: number | null;
 }
 
 interface LeetCodeResponse {
     data?: {
+        allQuestionsCount?: Array<{ difficulty: string; count: number }>;
         matchedUser?: {
             username: string;
             profile?: {
@@ -42,6 +48,10 @@ interface LeetCodeResponse {
 
 const QUERY = `
 query UserStats($username: String!) {
+    allQuestionsCount {
+        difficulty
+        count
+    }
 	matchedUser(username: $username) {
 		username
 
@@ -117,6 +127,14 @@ export async function fetchLeetCodeStats(
         );
     };
 
+    const getTotal = (difficulty: string): number => {
+        const count = body.data?.allQuestionsCount?.find((item) => item.difficulty === difficulty)?.count;
+        if (count == null || !Number.isInteger(count) || count <= 0) {
+            throw new Error(`Missing or invalid LeetCode problem total: ${difficulty}`);
+        }
+        return count;
+    };
+
     const easySolved = getSolved("Easy");
     const mediumSolved = getSolved("Medium");
     const hardSolved = getSolved("Hard");
@@ -126,6 +144,11 @@ export async function fetchLeetCodeStats(
 
         ranking: user.profile?.ranking ?? null,
         reputation: user.profile?.reputation ?? null,
+
+        totalProblems: getTotal("All"),
+        easyProblems: getTotal("Easy"),
+        mediumProblems: getTotal("Medium"),
+        hardProblems: getTotal("Hard"),
 
         easySolved,
         mediumSolved,
