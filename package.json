@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "build": "vite build",
-    "deploy": "npm run build && wrangler deploy",
+    "deploy": "npm run build && wrangler d1 migrations apply leetcode-stats --remote && wrangler deploy",
     "dev": "npm run build && wrangler dev --local",
     "start": "npm run dev",
     "test": "vitest",
-    "cf-typegen": "wrangler types"
+    "cf-typegen": "wrangler types",
+    "check": "tsc --noEmit && tsc --noEmit --jsx react-jsx --lib es2024,dom --target es2024 --moduleResolution bundler --module esnext --skipLibCheck frontend/App.tsx frontend/main.tsx"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.12.4",
