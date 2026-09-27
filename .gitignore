@@ -21,6 +21,8 @@
 !/frontend/*.tsx
 !/frontend/*.css
 !/frontend/*.html
+!/frontend/public/
+!/frontend/public/favicon.svg
 !/src/
 !/src/*.ts
 !/migrations/
