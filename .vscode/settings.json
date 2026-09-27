@@ -1,5 +1,11 @@
 {
 	"files.associations": {
 		"wrangler.json": "jsonc"
+	},
+	"terminal.integrated.env.osx": {
+		"WRANGLER_HIDE_BANNER": "true"
+	},
+	"terminal.integrated.env.linux": {
+		"WRANGLER_HIDE_BANNER": "true"
 	}
 }
