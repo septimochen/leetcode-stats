@@ -18,6 +18,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^5.1.1",
+    "cf": "^1.0.0-beta.12",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.5.2",
     "vitest": "~3.2.0",
