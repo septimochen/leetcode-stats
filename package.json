@@ -5,7 +5,7 @@
   "scripts": {
     "build": "vite build",
     "deploy": "npm run build && cf d1 migrations apply \"$CF_D1_DATABASE_ID\" && cf deploy",
-    "dev": "npm run build && cf dev --local",
+    "dev": "npm run build && cf dev",
     "start": "npm run dev",
     "test": "vitest",
     "cf-typegen": "cf workers types",
@@ -22,7 +22,7 @@
     "tailwindcss": "^4.3.3",
     "typescript": "^5.5.2",
     "vitest": "~3.2.0",
-    "wrangler": "^4.121.0"
+    "wrangler": "^4.147.0"
   },
   "dependencies": {
     "react": "^19.2.8",
