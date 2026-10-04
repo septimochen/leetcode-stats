@@ -11,8 +11,8 @@ in the browser and visualizes:
 
 ## Fork setup
 
-The repository tracks `wrangler.example.jsonc`. Your actual `wrangler.jsonc` and
-`.dev.vars` are ignored so each fork can use its own Cloudflare account and database.
+The repository tracks `cloudflare.config.ts`. Your `.dev.vars` is ignored so each
+fork can use its own Cloudflare account and database.
 
 ```sh
 npm ci
@@ -33,25 +33,22 @@ commands so development data remains separate from production.
 Before your first production deployment:
 
 ```sh
-npx wrangler login
-npx wrangler d1 create leetcode-stats
+cf auth login
+cf d1 create leetcode-stats
 ```
 
-Copy the returned database ID into `database_id` in your ignored `wrangler.jsonc`,
-replacing `YOUR_DATABASE_ID`. If Wrangler offers to update the config, let it update
-`wrangler.jsonc`. Set the production username and deploy:
+Set the returned database ID as `CF_D1_DATABASE_ID` in your shell. Set the
+production username and deploy:
 
 ```sh
-npx wrangler secret put LEETCODE_USERNAME
+cf workers secrets update LEETCODE_USERNAME --worker leetcode-stats --type secret_text
 make deploy
 ```
 
 Use your own Cloudflare account and database. Never copy another person's database
 ID for your deployment. Shared configuration changes belong in
-`wrangler.example.jsonc`; apply them to your local config as needed. CI must also
-supply a complete `wrangler.jsonc` before using the migration-aware deployment
-command. The previously committed database ID remains in Git history; it is an
-identifier, not a credential.
+`cloudflare.config.ts`; CI must provide its own credentials and
+`CF_D1_DATABASE_ID` before using the migration-aware deployment command.
 
 ## Development and deployment
 
@@ -64,13 +61,14 @@ fails, deployment stops so new code cannot be published against an outdated sche
 The completion-progress feature requires `0002_problem_totals.sql`.
 
 Common commands: `make setup`, `make build`, `make check`, `make test`, `make format`,
-`make dev`, `make migrate-local`, and `make typegen`. Local migrations always use
-`--local`; only the deployment command applies production migrations.
+`make dev`, `make migrate-local`, and `make typegen`. Set `CF_D1_DATABASE_ID` before
+migration commands; local migrations use `--local`, while deployment applies
+production migrations before publishing.
 
 If a collection fails because a migration was missing, apply the pending migrations
 and restart the affected Workflow instance from its failed write step:
 
 ```sh
-npx wrangler d1 migrations apply leetcode-stats --remote
-npx wrangler workflows instances restart leetcode-stats-workflow <instance-id> --from-step-name "save statistics to D1"
+cf d1 migrations apply "$CF_D1_DATABASE_ID"
+cf workflows instances restart leetcode-stats-workflow <instance-id> --from-step-name "save statistics to D1"
 ```

@@ -1,7 +1,8 @@
 .PHONY: setup install build check test format dev migrate-local deploy typegen
 
+CF_D1_DATABASE_ID ?=
+
 setup:
-	@test -f wrangler.jsonc || cp wrangler.example.jsonc wrangler.jsonc
 	@test -f .dev.vars || cp .dev.vars.example .dev.vars
 
 install:
@@ -24,7 +25,8 @@ dev:
 	npm run dev
 
 migrate-local:
-	npx wrangler d1 migrations apply leetcode-stats --local
+	@test -n "$(CF_D1_DATABASE_ID)" || (echo "Set CF_D1_DATABASE_ID to the D1 database ID" && exit 1)
+	cf d1 migrations apply "$(CF_D1_DATABASE_ID)" --local
 
 deploy:
 	npm run deploy

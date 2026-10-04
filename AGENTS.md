@@ -150,9 +150,9 @@ leetcode-stats/
 
 # Cloudflare Configuration
 
-The tracked `wrangler.example.jsonc` template defines the shared configuration.
-Run `make setup` after cloning to create the ignored `wrangler.jsonc` and
-`.dev.vars` without overwriting existing files. Wrangler uses `wrangler.jsonc`.
+The tracked `cloudflare.config.ts` defines the shared configuration. Run
+`make setup` after cloning to create the ignored `.dev.vars` without overwriting
+existing files. The project uses the Cloudflare CLI (`cf`).
 
 The expected `wrangler.jsonc` structure is:
 
@@ -213,7 +213,7 @@ development must use local D1. See README.md for the first-time setup commands.
 Set the username as a Cloudflare Worker secret before deployment:
 
 ```bash
-npx wrangler secret put LEETCODE_USERNAME
+cf workers secrets update LEETCODE_USERNAME --worker leetcode-stats --type secret_text
 ```
 
 For local development, provide the same secret in `.dev.vars` (which must not
@@ -650,11 +650,11 @@ For local development, use:
 npm run dev
 ```
 
-This runs `npm run build && wrangler dev --local`.
+This runs `npm run build && cf dev --local`.
 
 Open the dashboard at `http://localhost:8787/dashboard`.
 
-Do not use `npx wrangler dev` without `--local` when testing this project,
+Do not use `cf dev` without `--local` when testing this project,
 because local mode keeps development D1 data separate from production D1.
 
 During development, local mode should use the local D1 database:
@@ -670,14 +670,14 @@ During development, local mode should use the local D1 database:
 To query the local database:
 
 ```bash
-npx wrangler d1 execute leetcode-stats --local \
+cf d1 execute <database-id> --local \
   --command "SELECT * FROM stats;"
 ```
 
 To list tables:
 
 ```bash
-npx wrangler d1 execute leetcode-stats --local \
+cf d1 execute <database-id> --local \
   --command "SELECT name FROM sqlite_master WHERE type='table';"
 ```
 
@@ -697,7 +697,7 @@ the argument to SQLite as SQL.
 To query the production database:
 
 ```bash
-npx wrangler d1 execute leetcode-stats --remote \
+cf d1 execute <database-id> \
   --command "SELECT * FROM stats;"
 ```
 
@@ -742,13 +742,13 @@ It does NOT access the local D1.
 For local development:
 
 ```bash
-npx wrangler d1 migrations apply leetcode-stats --local
+cf d1 migrations apply <database-id> --local
 ```
 
 For production:
 
 ```bash
-npx wrangler d1 migrations apply leetcode-stats --remote
+cf d1 migrations apply <database-id>
 ```
 
 Always make sure the production migration has been applied before deploying
@@ -761,7 +761,7 @@ code that expects the schema.
 Authenticate with Cloudflare if needed:
 
 ```bash
-npx wrangler login
+cf auth login
 ```
 
 Use the migration-aware deployment command:
@@ -774,12 +774,12 @@ make deploy
 `npm run deploy` runs:
 
 ```bash
-npm run build && wrangler d1 migrations apply leetcode-stats --remote && wrangler deploy
+npm run build && cf d1 migrations apply "$CF_D1_DATABASE_ID" && cf deploy
 ```
 
 The order is intentional: build, apply pending production migrations, then publish.
 Keep the `&&` failure gates: if either build or migration fails, publishing must stop.
-Do not bypass this command with a direct `wrangler deploy`, including in CI.
+Do not bypass this command with a direct `cf deploy`, including in CI.
 See Debugging Lesson 6 for schema-change verification and recovery.
 
 After deployment:
@@ -801,7 +801,7 @@ https://leetcode-stats.<subdomain>.workers.dev/dashboard
 When changing bindings in `wrangler.jsonc`, regenerate Worker types:
 
 ```bash
-npx wrangler types
+cf workers types
 ```
 
 This updates:
@@ -956,7 +956,7 @@ Cloudflare provides a local scheduled-handler endpoint.
 With:
 
 ```bash
-npx wrangler dev --local
+cf dev --local
 ```
 
 test the scheduled handler with:
@@ -1047,25 +1047,25 @@ HTTP API
 A major source of confusion was:
 
 ```bash
-npx wrangler d1 execute ... --local
+cf d1 execute <database-id> --local
 ```
 
 versus:
 
 ```bash
-npx wrangler d1 execute ... --remote
+cf d1 execute <database-id>
 ```
 
 and:
 
 ```bash
-npx wrangler dev --local
+cf dev --local
 ```
 
 versus:
 
 ```bash
-npx wrangler dev --remote
+cf dev
 ```
 
 Always explicitly use `--local` during local development when testing the
@@ -1078,7 +1078,7 @@ local database.
 This fails:
 
 ```bash
-npx wrangler d1 execute leetcode-stats --local \
+cf d1 execute <database-id> --local \
   --command ".tables"
 ```
 
@@ -1143,7 +1143,7 @@ instead.
 This:
 
 ```bash
-npx wrangler d1 execute leetcode-stats --remote ...
+cf d1 execute <database-id> ...
 ```
 
 only tests D1.
@@ -1219,17 +1219,17 @@ failed write step recovered the collection successfully.
 Inspect the affected instance before making speculative code changes:
 
 ```bash
-npx wrangler workflows instances describe leetcode-stats-workflow <instance-id> --no-step-output
-npx wrangler d1 migrations list leetcode-stats --remote
+cf workflows instances describe leetcode-stats-workflow <instance-id> --no-step-output
+cf d1 migrations list "$CF_D1_DATABASE_ID"
 ```
 
 For a confirmed missing-schema error, apply the pending migration, then restart
 that specific instance from its failed write step:
 
 ```bash
-npx wrangler d1 migrations apply leetcode-stats --remote
-npx wrangler workflows instances restart leetcode-stats-workflow <instance-id> --from-step-name "save statistics to D1"
-npx wrangler workflows instances describe leetcode-stats-workflow <instance-id> --no-step-output
+cf d1 migrations apply "$CF_D1_DATABASE_ID"
+cf workflows instances restart leetcode-stats-workflow <instance-id> --from-step-name "save statistics to D1"
+cf workflows instances describe leetcode-stats-workflow <instance-id> --no-step-output
 ```
 
 Restarting from the write step preserves the already collected statistics and
@@ -1373,7 +1373,7 @@ npm install
 ## Generate Worker types
 
 ```bash
-npx wrangler types
+cf workers types
 ```
 
 ## Local development
@@ -1391,27 +1391,27 @@ npm run build
 ## Local D1 query
 
 ```bash
-npx wrangler d1 execute leetcode-stats --local \
+cf d1 execute <database-id> --local \
   --command "SELECT * FROM stats;"
 ```
 
 ## Remote D1 query
 
 ```bash
-npx wrangler d1 execute leetcode-stats --remote \
+cf d1 execute <database-id> \
   --command "SELECT * FROM stats;"
 ```
 
 ## Apply local migrations
 
 ```bash
-npx wrangler d1 migrations apply leetcode-stats --local
+cf d1 migrations apply <database-id> --local
 ```
 
 ## Apply production migrations
 
 ```bash
-npx wrangler d1 migrations apply leetcode-stats --remote
+cf d1 migrations apply "$CF_D1_DATABASE_ID"
 ```
 
 ## Deploy
@@ -1423,13 +1423,13 @@ npm run deploy
 ## List Workflows
 
 ```bash
-npx wrangler workflows list
+cf workflows list
 ```
 
-## Check Wrangler version
+## Check Cloudflare CLI version
 
 ```bash
-npx wrangler --version
+cf --version
 ```
 
 ---
