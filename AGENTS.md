@@ -201,11 +201,9 @@ The expected `wrangler.jsonc` structure is:
 }
 ```
 
-Keep the actual D1 `database_id` only in the ignored `wrangler.jsonc` used by
-Wrangler. The tracked `wrangler.example.jsonc` must use `YOUR_DATABASE_ID`.
-Never re-add `wrangler.jsonc` to Git or copy account-specific IDs into the template.
-New forks must create their own database and fill in its ID before deployment.
-CI must supply its own complete config before applying migrations and publishing.
+Keep `CF_D1_DATABASE_ID` in the shell or CI environment. Never commit the D1 ID
+to Git or copy an account-specific ID into shared configuration. New forks must
+create their own database and provide the environment variable before deployment.
 Keep shared config changes in the template and synchronize the ignored local
 config when needed. Do not enable `remote: true` in the shared template; local
 development must use local D1. See README.md for the first-time setup commands.

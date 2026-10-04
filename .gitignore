@@ -12,11 +12,12 @@
 !/vite.config.ts
 !/vitest.config.mts
 !/worker-configuration.d.ts
+!/cloudflare.config.ts
 !/wrangler.example.jsonc
 !/.dev.vars.example
 !/.env.example
 !/.vscode/
-!/.vscode/settings.json
+!/.vscode/extensions.json
 !/frontend/
 !/frontend/*.tsx
 !/frontend/*.css

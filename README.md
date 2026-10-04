@@ -45,6 +45,9 @@ cf workers secrets update LEETCODE_USERNAME --worker leetcode-stats --type secre
 make deploy
 ```
 
+Keep `CF_D1_DATABASE_ID` in your shell or an untracked local environment file;
+it is intentionally not stored in this repository.
+
 Use your own Cloudflare account and database. Never copy another person's database
 ID for your deployment. Shared configuration changes belong in
 `cloudflare.config.ts`; CI must provide its own credentials and
