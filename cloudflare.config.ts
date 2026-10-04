@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 import { bindings, defineConfig, exports, triggers } from "cf/config";
 
 /**
