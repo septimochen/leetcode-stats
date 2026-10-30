@@ -14,11 +14,16 @@ build:
 check:
 	npm run check
 	npm run build
+	uv run ruff check scripts
+	uv run ruff format --check scripts
+	uv run ty check scripts
 
 test:
 	npm test -- --run
+	uv run pytest
 
 format:
+	uv run ruff format scripts
 	npx --yes prettier@3.6.2 --write frontend src test package.json tsconfig.json vite.config.ts vitest.config.mts wrangler.example.jsonc README.md
 
 dev:

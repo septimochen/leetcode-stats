@@ -31,3 +31,7 @@
 !/test/
 !/test/*.ts
 !/test/*.json
+!/pyproject.toml
+!/uv.lock
+!/scripts/
+!/scripts/*.py

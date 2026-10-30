@@ -109,3 +109,18 @@ The response reports `inserted` and `skipped`; each request accepts at most 5,00
 records and 1 MB. Retry a failed import safely: already inserted slugs are skipped.
 `GET /api/ac-submissions` returns the latest 15 recorded problems. Apply migration
 `0003_ac_submissions.sql` before publishing through the migration-aware deploy command.
+
+### Converting a LeetCode progress export
+
+Save the complete GraphQL response containing `data.userProgressQuestionList` as
+JSON, then run `uv run python scripts/create_history.py progress.json history.json`.
+The output defaults to `history.json` when the second argument is omitted, and is
+ignored by Git. Only questions marked `SOLVED` are included; incomplete exports
+are rejected. The export has no acceptance time: the script uses `lastSubmittedAt`
+as an approximation, including when a solved question's latest result was not AC.
+It reports those cases. Existing API records are never overwritten, so importing
+this approximation cannot replace timestamps already collected from the AC feed.
+Follow the import command above after reviewing the generated file.
+
+Python tooling uses `uv`; `make check`, `make test`, and `make format` also run the
+Python checks, tests, and formatter.
