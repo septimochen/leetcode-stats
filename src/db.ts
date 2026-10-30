@@ -86,3 +86,20 @@ export async function getAllStats(
 
     return result.results;
 }
+export async function saveAcSubmissions(db: D1Database, submissions: import("./leetcode").AcSubmission[]): Promise<number> {
+    let inserted = 0;
+    // Keep batches bounded for large historical imports.
+    for (let offset = 0; offset < submissions.length; offset += 100) {
+        const statements = submissions.slice(offset, offset + 100).map(submission => db
+            .prepare("INSERT INTO ac_submissions (title, titleSlug, timestamp) VALUES (?, ?, ?) ON CONFLICT(titleSlug) DO NOTHING")
+            .bind(submission.title, submission.titleSlug, submission.timestamp));
+        const results = await db.batch(statements);
+        inserted += results.reduce((total, result) => total + (result.meta.changes ?? 0), 0);
+    }
+    return inserted;
+}
+
+export async function getRecentAcSubmissions(db: D1Database) {
+    const result = await db.prepare("SELECT title, titleSlug, timestamp FROM ac_submissions ORDER BY timestamp DESC, titleSlug ASC LIMIT 15").all();
+    return result.results;
+}

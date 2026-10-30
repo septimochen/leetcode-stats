@@ -75,3 +75,37 @@ and restart the affected Workflow instance from its failed write step:
 cf d1 migrations apply "$CF_D1_DATABASE_ID"
 cf workflows instances restart leetcode-stats-workflow <instance-id> --from-step-name "save statistics to D1"
 ```
+
+## Accepted problem history
+
+Each daily Workflow fetches up to 20 recent accepted submissions and adds previously
+unseen problem slugs. LeetCode's feed is limited to 20 entries, so more than 20
+acceptances between runs can leave gaps. The table stores one record per problem,
+not every submission: a later acceptance or import never replaces an existing slug.
+The dashboard displays the 15 records with the latest recorded timestamps.
+
+To enable historical imports, set a long, random `AC_IMPORT_TOKEN` Worker secret:
+
+```sh
+cf workers secrets update AC_IMPORT_TOKEN --worker leetcode-stats --type secret_text
+```
+
+For local use, add `AC_IMPORT_TOKEN` to the ignored `.dev.vars`. Send a JSON array
+of objects to the API; timestamps are Unix seconds (numbers or digit strings):
+
+```sh
+curl -X POST http://localhost:8787/api/ac-submissions \
+  -H "Authorization: Bearer $AC_IMPORT_TOKEN" -H 'Content-Type: application/json' \
+  --data-binary @history.json
+```
+
+Example `history.json`:
+
+```json
+[{"title":"Two Sum","titleSlug":"two-sum","timestamp":"1470000000"}]
+```
+
+The response reports `inserted` and `skipped`; each request accepts at most 5,000
+records and 1 MB. Retry a failed import safely: already inserted slugs are skipped.
+`GET /api/ac-submissions` returns the latest 15 recorded problems. Apply migration
+`0003_ac_submissions.sql` before publishing through the migration-aware deploy command.

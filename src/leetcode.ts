@@ -162,3 +162,43 @@ export async function fetchLeetCodeStats(
             body.data?.userContestRanking?.globalRanking ?? null,
     };
 }
+export interface AcSubmission {
+    title: string;
+    titleSlug: string;
+    timestamp: number;
+}
+
+// LeetCode returns timestamps as Unix seconds encoded as strings.
+export function parseAcSubmission(value: unknown): AcSubmission | null {
+    if (typeof value !== "object" || value === null) return null;
+    const record = value as Record<string, unknown>;
+    const timestamp = typeof record.timestamp === "string" && /^\d+$/.test(record.timestamp)
+        ? Number(record.timestamp) : record.timestamp;
+    if (typeof record.title !== "string" || !record.title.trim() || record.title.length > 500 ||
+        typeof record.titleSlug !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(record.titleSlug) || record.titleSlug.length > 300 ||
+        typeof timestamp !== "number" || !Number.isSafeInteger(timestamp) || timestamp < 0 || timestamp > 8640000000000) return null;
+    return { title: record.title, titleSlug: record.titleSlug, timestamp };
+}
+
+export async function fetchRecentAcSubmissions(username: string): Promise<AcSubmission[]> {
+    const response = await fetch("https://leetcode.com/graphql", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json", "User-Agent": "leetcode-stats-worker/1.0" },
+        body: JSON.stringify({
+            query: `query recentAcSubmissions($username: String!, $limit: Int!) {
+                recentAcSubmissionList(username: $username, limit: $limit) { title titleSlug timestamp }
+            }`,
+            variables: { username, limit: 20 },
+        }),
+    });
+    if (!response.ok) throw new Error(`LeetCode request failed: ${response.status} ${response.statusText}`);
+    const body = await response.json() as { data?: { recentAcSubmissionList?: unknown }; errors?: Array<{ message: string }> };
+    if (body.errors?.length) throw new Error(`LeetCode GraphQL error: ${body.errors.map(error => error.message).join(", ")}`);
+    const list = body.data?.recentAcSubmissionList;
+    if (!Array.isArray(list)) throw new Error("Missing recent accepted submissions from LeetCode");
+    return list.map(item => {
+        const submission = parseAcSubmission(item);
+        if (!submission) throw new Error("Invalid accepted submission from LeetCode");
+        return submission;
+    });
+}

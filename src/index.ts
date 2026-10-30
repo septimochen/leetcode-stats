@@ -4,8 +4,8 @@ import {
 	type WorkflowStep,
 } from "cloudflare:workers";
 
-import { fetchLeetCodeStats } from "./leetcode";
-import { getAllStats, getLatestStats, saveStats } from "./db";
+import { fetchLeetCodeStats, fetchRecentAcSubmissions, parseAcSubmission } from "./leetcode";
+import { getAllStats, getLatestStats, saveStats, getRecentAcSubmissions, saveAcSubmissions } from "./db";
 
 interface WorkflowParams {
 	username: string;
@@ -81,6 +81,16 @@ export class LeetCodeStatsWorkflow extends WorkflowEntrypoint<
 				};
 			},
 		);
+
+		const submissions = await step.do("fetch recent accepted submissions", {
+			retries: { limit: 5, delay: "30 seconds", backoff: "exponential" },
+			timeout: "2 minutes",
+		}, async () => fetchRecentAcSubmissions(username));
+
+		await step.do("save accepted submissions to D1", {
+			retries: { limit: 5, delay: "10 seconds", backoff: "exponential" },
+			timeout: "1 minute",
+		}, async () => saveAcSubmissions(this.env.DB, submissions));
 
 		return {
 			username,
@@ -162,6 +172,41 @@ export default {
 					},
 					{ status: 500 },
 				);
+			}
+		}
+
+		if (url.pathname === "/api/ac-submissions") {
+			if (request.method === "GET") {
+				try {
+					return Response.json(await getRecentAcSubmissions(env.DB));
+				} catch (error) {
+					console.error(error);
+					return Response.json({ error: "Could not load accepted submissions" }, { status: 500 });
+				}
+			}
+			if (request.method !== "POST") return Response.json({ error: "Method not allowed" }, { status: 405, headers: { Allow: "GET, POST" } });
+			const token = (env as Env & { AC_IMPORT_TOKEN?: string }).AC_IMPORT_TOKEN;
+			if (!token) return Response.json({ error: "Import is not configured" }, { status: 503 });
+			if (request.headers.get("Authorization") !== `Bearer ${token}`) return Response.json({ error: "Unauthorized" }, { status: 401 });
+			const contentLength = Number(request.headers.get("Content-Length"));
+			if (contentLength > 1_000_000) return Response.json({ error: "Import too large" }, { status: 413 });
+			let data: unknown;
+			try {
+				const text = await request.text();
+				if (new TextEncoder().encode(text).length > 1_000_000) return Response.json({ error: "Import too large" }, { status: 413 });
+				data = JSON.parse(text);
+			} catch {
+				return Response.json({ error: "Expected a JSON array" }, { status: 400 });
+			}
+			if (!Array.isArray(data) || data.length > 5000) return Response.json({ error: "Expected an array of at most 5000 submissions" }, { status: 400 });
+			const submissions = data.map(parseAcSubmission);
+			if (submissions.some(submission => submission === null)) return Response.json({ error: "Invalid submission: expected title, titleSlug, and Unix timestamp in seconds" }, { status: 400 });
+			try {
+				const inserted = await saveAcSubmissions(env.DB, submissions.filter(submission => submission !== null));
+				return Response.json({ inserted, skipped: submissions.length - inserted });
+			} catch (error) {
+				console.error(error);
+				return Response.json({ error: "Could not import accepted submissions; retrying is safe" }, { status: 500 });
 			}
 		}
 
