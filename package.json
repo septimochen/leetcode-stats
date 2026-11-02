@@ -2,6 +2,7 @@
   "name": "leetcode-stats",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "build": "vite build",
     "deploy": "npm run build && cf d1 migrations apply \"$CF_D1_DATABASE_ID\" && cf deploy",
