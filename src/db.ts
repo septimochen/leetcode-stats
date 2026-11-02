@@ -1,4 +1,4 @@
-import type { LeetCodeStats } from "./leetcode";
+import type { AcSubmission, LeetCodeStats } from "./leetcode";
 
 export async function saveStats(
     db: D1Database,
@@ -102,4 +102,30 @@ export async function saveAcSubmissions(db: D1Database, submissions: import("./l
 export async function getRecentAcSubmissions(db: D1Database) {
     const result = await db.prepare("SELECT title, titleSlug, timestamp FROM ac_submissions ORDER BY timestamp DESC, titleSlug ASC LIMIT 15").all();
     return result.results;
+}
+
+export type AcSubmissionPosition = Pick<AcSubmission, "timestamp" | "titleSlug">;
+
+export async function getAcSubmissionsPage(
+    db: D1Database,
+    limit: number,
+    after?: AcSubmissionPosition,
+): Promise<{ submissions: AcSubmission[]; nextPosition: AcSubmissionPosition | null }> {
+    const query = after
+        ? db.prepare(`SELECT title, titleSlug, timestamp FROM ac_submissions
+            WHERE timestamp < ? OR (timestamp = ? AND titleSlug > ?)
+            ORDER BY timestamp DESC, titleSlug ASC LIMIT ?`)
+            .bind(after.timestamp, after.timestamp, after.titleSlug, limit + 1)
+        : db.prepare(`SELECT title, titleSlug, timestamp FROM ac_submissions
+            ORDER BY timestamp DESC, titleSlug ASC LIMIT ?`)
+            .bind(limit + 1);
+    const { results } = await query.all<AcSubmission>();
+    const submissions = results.slice(0, limit);
+    const last = submissions.at(-1);
+    return {
+        submissions,
+        nextPosition: results.length > limit && last
+            ? { timestamp: last.timestamp, titleSlug: last.titleSlug }
+            : null,
+    };
 }

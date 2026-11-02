@@ -19,7 +19,7 @@ npm ci
 make setup
 ```
 
-`make setup` copies both examples only when the destination files do not exist.
+`make setup` copies `.dev.vars.example` only when `.dev.vars` does not exist.
 Set `LEETCODE_USERNAME` in `.dev.vars` to your LeetCode username, then run:
 
 ```sh
@@ -27,7 +27,7 @@ make migrate-local
 make dev
 ```
 
-The template leaves remote D1 development disabled. Keep `--local` on local
+The shared configuration leaves remote D1 development disabled. Keep `--local` on local
 commands so development data remains separate from production.
 
 Before your first production deployment:
@@ -102,7 +102,7 @@ curl -X POST http://localhost:8787/api/ac-submissions \
 Example `history.json`:
 
 ```json
-[{"title":"Two Sum","titleSlug":"two-sum","timestamp":"1470000000"}]
+[{ "title": "Two Sum", "titleSlug": "two-sum", "timestamp": "1470000000" }]
 ```
 
 The response reports `inserted` and `skipped`; each request accepts at most 5,000
@@ -124,3 +124,73 @@ Follow the import command above after reviewing the generated file.
 
 Python tooling uses `uv`; `make check`, `make test`, and `make format` also run the
 Python checks, tests, and formatter.
+
+## MCP accepted history
+
+The same Worker serves a read-only MCP server at `/mcp` using Streamable HTTP.
+It reads D1 directly and does not trigger collection or contact LeetCode. It is
+intended for a single configured account and clients that support an Authorization
+header. OAuth and browser sign-in are not provided.
+
+Choose a long, random token distinct from `AC_IMPORT_TOKEN` and configure it before
+deploying:
+
+```sh
+cf workers secrets update MCP_AUTH_TOKEN --worker leetcode-stats --type secret_text
+make deploy
+```
+
+For local development, add `MCP_AUTH_TOKEN=<your-local-token>` to the ignored
+`.dev.vars`, run `make migrate-local`, then `make dev`. Existing `.dev.vars` files
+are preserved by `make setup`, so add the new entry yourself. Local development
+uses local D1. The installed `cf` beta rejects top-level `cf dev --local`, so
+`make dev` uses `cf dev --implArgs=--local` to explicitly forward local mode to
+its development runtime. `make typegen` regenerates the tracked
+`worker-configuration.d.ts` from the shared configuration through the current
+Cloudflare CLI.
+
+Configure your MCP client with:
+
+| Setting   | Value                                                                 |
+| --------- | --------------------------------------------------------------------- |
+| Transport | Streamable HTTP                                                       |
+| URL       | `https://<your-worker-host>/mcp` (local: `http://localhost:8787/mcp`) |
+| Header    | `Authorization: Bearer <your-MCP_AUTH_TOKEN>`                         |
+
+Keep the token in your client's secret storage or environment, outside Git.
+An unset or blank server token returns HTTP `503`; missing or incorrect credentials
+return `401`. The import token cannot authenticate MCP requests. Authentication
+applies to `/mcp`; the existing HTTP API has its own access rules.
+
+### Tool: `list_ac_submissions`
+
+- Optional `limit`: integer from 1 to 500, default 100.
+- Optional `cursor`: opaque `nextCursor` from the preceding response.
+- Returns `{ submissions, nextCursor }`; each submission has `title`, `titleSlug`,
+  and a Unix-seconds `timestamp`. The same object is returned as structured content
+  and JSON text for client compatibility.
+- Records are ordered by timestamp descending, then problem slug ascending.
+  Continue calling with `nextCursor` until it is `null` to retrieve all stored
+  history. A single call may return only part of the history.
+
+For example, call with `{ "limit": 100 }`, then call with
+`{ "limit": 100, "cursor": "<nextCursor>" }` for each remaining page.
+Pagination tolerates equal timestamps and newer inserts without shifting existing
+pages; it is not a frozen database snapshot. Restart from the first page to include
+newer problems added while traversing.
+
+“Full history” means every problem currently stored in `ac_submissions`, not every
+accepted attempt or a guarantee of complete LeetCode history. Each problem retains
+its first stored record, repeat solves are ignored, collection can miss entries,
+and exported timestamps may be approximate (see Accepted problem history above).
+No additional migration is needed beyond the existing `0003_ac_submissions.sql`.
+The dashboard continues to display the latest 15 stored problems.
+
+To check a running local server using the installed SDK client:
+
+```sh
+MCP_URL=http://localhost:8787/mcp MCP_AUTH_TOKEN='your-local-token' make test-mcp
+```
+
+The smoke check discovers the tool and traverses all pages, reporting counts only.
+It does not import submissions, run collection, or modify the database.

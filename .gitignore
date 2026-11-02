@@ -35,3 +35,4 @@
 !/uv.lock
 !/scripts/
 !/scripts/*.py
+!/scripts/*.mjs

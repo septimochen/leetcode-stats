@@ -6,6 +6,7 @@ import {
 
 import { fetchLeetCodeStats, fetchRecentAcSubmissions, parseAcSubmission } from "./leetcode";
 import { getAllStats, getLatestStats, saveStats, getRecentAcSubmissions, saveAcSubmissions } from "./db";
+import { handleMcpRequest } from "./mcp";
 
 interface WorkflowParams {
 	username: string;
@@ -117,6 +118,10 @@ export default {
 		env: Env,
 	): Promise<Response> {
 		const url = new URL(request.url);
+
+		if (url.pathname === "/mcp") {
+			return handleMcpRequest(request, env);
+		}
 
 		if (url.pathname === "/") {
 			return Response.json({

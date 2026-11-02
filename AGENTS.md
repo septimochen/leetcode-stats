@@ -648,7 +648,10 @@ For local development, use:
 npm run dev
 ```
 
-This runs `npm run build && cf dev --local`.
+This runs `npm run build && cf dev --implArgs=--local`. The installed `cf` beta
+rejects top-level `cf dev --local`; the positional `--implArgs=--local` form
+explicitly forwards local mode to the installed development runtime. Use
+`make dev` to keep this CLI compatibility detail in one place.
 
 Open the dashboard at `http://localhost:8787/dashboard`.
 
@@ -796,13 +799,15 @@ https://leetcode-stats.<subdomain>.workers.dev/dashboard
 
 # Type Generation
 
-When changing bindings in `wrangler.jsonc`, regenerate Worker types:
+When changing bindings in `cloudflare.config.ts`, regenerate Worker types:
 
 ```bash
-cf workers types
+make typegen
 ```
 
-This updates:
+This runs `cf workers types` and copies the generated declarations from
+`.cloudflare/types/index.d.ts`, adjusting the config import for the tracked
+entrypoint. It updates:
 
 ```text
 worker-configuration.d.ts

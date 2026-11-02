@@ -1,4 +1,4 @@
-.PHONY: setup install build check test format dev migrate-local deploy typegen
+.PHONY: setup install build check test test-mcp format dev migrate-local deploy typegen
 
 CF_D1_DATABASE_ID ?=
 
@@ -22,9 +22,12 @@ test:
 	npm test -- --run
 	uv run pytest
 
+test-mcp:
+	node scripts/test_mcp.mjs
+
 format:
 	uv run ruff format scripts
-	npx --yes prettier@3.6.2 --write frontend src test package.json tsconfig.json vite.config.ts vitest.config.mts wrangler.example.jsonc README.md
+	npx --yes prettier@3.6.2 --write frontend src test scripts/*.mjs package.json tsconfig.json cloudflare.config.ts vite.config.ts vitest.config.mts wrangler.example.jsonc README.md
 
 dev:
 	npm run dev

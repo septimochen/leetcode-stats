@@ -1,1 +1,4 @@
 LEETCODE_USERNAME=your_leetcode_username
+# Optional features remain unavailable until you provide distinct random tokens.
+AC_IMPORT_TOKEN=
+MCP_AUTH_TOKEN=

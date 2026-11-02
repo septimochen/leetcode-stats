@@ -1,6 +1,6 @@
 /// <reference types="node" />
 
-import { bindings, defineConfig, exports, triggers } from "cf/config";
+import { bindings, defineConfig, exports, triggers } from 'cf/config';
 
 /**
  * Secret-like files were detected but not read or migrated: .dev.vars, .dev.vars.example. Only `secrets.required` entries are migrated.
@@ -9,44 +9,39 @@ import { bindings, defineConfig, exports, triggers } from "cf/config";
 
 export default defineConfig({
 	worker: {
-		name: "leetcode-stats",
-		compatibilityDate: "2026-08-11",
-		compatibilityFlags: [
-			"nodejs_compat",
-		],
-		entrypoint: "src/index.ts",
+		name: 'leetcode-stats',
+		compatibilityDate: '2026-08-11',
+		compatibilityFlags: ['nodejs_compat'],
+		entrypoint: 'src/index.ts',
 		observability: {
 			enabled: true,
 		},
 		assets: {
-			runWorkerFirst: [
-				"/api/*",
-				"/dashboard",
-			],
+			runWorkerFirst: ['/api/*', '/dashboard', '/mcp'],
 		},
 		triggers: [
 			triggers.scheduled({
-				schedule: "30 11 * * *",
+				schedule: '30 11 * * *',
 			}),
 		],
 		env: {
 			DB: bindings.d1({
-				name: "leetcode-stats",
-				id: process.env.CF_D1_DATABASE_ID ?? "",
-				dev: {
-					remote: true,
-				},
+				name: 'leetcode-stats',
+				id: process.env.CF_D1_DATABASE_ID ?? '',
 			}),
+			LEETCODE_USERNAME: bindings.secret(),
+			AC_IMPORT_TOKEN: bindings.secret(),
+			MCP_AUTH_TOKEN: bindings.secret(),
 			LEETCODE_STATS_WORKFLOW: bindings.workflow({
-				name: "leetcode-stats-workflow",
-				worker: "leetcode-stats",
-				exportName: "LeetCodeStatsWorkflow",
+				name: 'leetcode-stats-workflow',
+				worker: 'leetcode-stats',
+				exportName: 'LeetCodeStatsWorkflow',
 			}),
 			ASSETS: bindings.assets(),
 		},
 		exports: {
 			LeetCodeStatsWorkflow: exports.workflow({
-				name: "leetcode-stats-workflow",
+				name: 'leetcode-stats-workflow',
 			}),
 		},
 	},
